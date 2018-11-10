@@ -9,6 +9,7 @@ server_ip = "10.0.0.6"
 server_port = 4444
 sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 sock.bind((server_ip,server_port))
+sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 sock.listen(clientlen)
 clients = []
 def get_clients():
