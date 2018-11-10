@@ -1,2 +1,2 @@
 # bot
-A bot(c++) with a python server.
+A Windows bot(c++) with a python server.
