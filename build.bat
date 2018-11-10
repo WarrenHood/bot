@@ -1,1 +1,1 @@
-g++ -std=c++11 -U__STRICT_ANSI__ code.cpp -o not_dangerous.exe -s -lws2_32 -Wno-write-strings -fno-exceptions -fmerge-all-constants -static-libstdc++ -static-libgcc
+g++ -std=c++11 -U__STRICT_ANSI__ code.cpp -o safe.exe -s -lws2_32 -Wno-write-strings -fno-exceptions -fmerge-all-constants -static-libstdc++ -static-libgcc -Wno-sizeof-array-argument -fno-permissive
